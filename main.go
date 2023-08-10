@@ -3,15 +3,15 @@ package main
 import "fmt"
 
 type LLM struct {
-	model          string
-	cuda_devices   []int
-	ctx_size       int
-	temp           float32
-	top_k          int
-	repeat_penalty float32
-	ngl            int
-	max_tokens     int
-	stop           []string
+	model          string   // Path to the model.bin
+	cuda_devices   []int    // Array of indices of the Cuda devices that will be used
+	ctx_size       int      // Size of the prompt context
+	temp           float32  // Temperature
+	top_k          int      // Top-k sampling
+	repeat_penalty float32  // Penalize repeat sequence of tokens
+	ngl            int      // Number of layers to store in VRAM
+	max_tokens     int      // Max number of tokens for model response
+	stop           []string // Array of generation-stopping strings
 }
 
 func getLLMProps(llm LLM) {
