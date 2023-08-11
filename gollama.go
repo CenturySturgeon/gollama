@@ -1,4 +1,4 @@
-package main
+package gollama
 
 import (
 	"fmt"
@@ -9,6 +9,7 @@ import (
 
 type LLM struct {
 	model            string   // Path to the model.bin
+	llamacpp         string   // Path to the llama.cpp folder
 	cuda_devices     []int    // Array of indices of the Cuda devices that will be used
 	ctx_size         int      // Size of the prompt context
 	temp             float32  // Temperature
@@ -17,11 +18,12 @@ type LLM struct {
 	ngl              int      // Number of layers to store in VRAM
 	max_tokens       int      // Max number of tokens for model response
 	stop             []string // Array of generation-stopping strings
-	instructionBlock string   // Instructions to format the model respone
+	instructionBlock string   // Instructions to format the model response
 }
 
 func (llm *LLM) getLLMProps() {
 	fmt.Println("Model Path: ", llm.model)
+	fmt.Println("Llama.cpp Path: ", llm.llamacpp)
 	fmt.Println("Indexes of Cuda devices to use: ", llm.cuda_devices)
 	fmt.Println("Size of the prompt context: ", llm.ctx_size)
 	fmt.Println("Temperature: ", llm.temp)
@@ -35,6 +37,9 @@ func (llm *LLM) getLLMProps() {
 func (llm *LLM) llmDefaults() {
 	if llm.model == "" {
 		llm.model = "./llama.cpp/models/ggml-vocab.bin"
+	}
+	if llm.llamacpp == "" {
+		llm.model = "./llama.cpp"
 	}
 	if llm.cuda_devices == nil {
 		llm.cuda_devices = []int{0}
@@ -128,7 +133,8 @@ func (llm *LLM) promptModel(prompts []string) {
 }
 
 func createPipes(llm *LLM) (*exec.Cmd, io.WriteCloser, io.ReadCloser, error) {
-	cmd := exec.Command("./llama.cpp/main", "-m", llm.model, "--color", "--ctx_size", fmt.Sprint(llm.ctx_size), "-n", "-1", "-ins", "-b", "128", "--top_k", fmt.Sprint(llm.top_k), "--temp", fmt.Sprint(llm.temp), "--repeat_penalty", fmt.Sprint(llm.repeat_penalty), "--n-gpu-layers", fmt.Sprint(llm.ngl), "-t", "8")
+	mainPath := llm.llamacpp + "/main"
+	cmd := exec.Command(mainPath, "-m", llm.model, "--color", "--ctx_size", fmt.Sprint(llm.ctx_size), "-n", "-1", "-ins", "-b", "128", "--top_k", fmt.Sprint(llm.top_k), "--temp", fmt.Sprint(llm.temp), "--repeat_penalty", fmt.Sprint(llm.repeat_penalty), "--n-gpu-layers", fmt.Sprint(llm.ngl), "-t", "8")
 	// Set the working directory if needed (for access to other directories)
 	// cmd.Dir = ""
 
@@ -161,9 +167,4 @@ func closePipes(cmd *exec.Cmd, stdin io.WriteCloser, stdout io.ReadCloser) {
 
 	// Close the communication with the llm
 	cmd.Process.Kill()
-}
-
-func main() {
-	llm := LLM{model: "./models/llama-2-13b-chat.ggmlv3.q4_0.bin", ngl: 30}
-	llm.promptModel([]string{"Hi, how are you ?", "How many pieces of bread do I need for a sandwich?"})
 }
