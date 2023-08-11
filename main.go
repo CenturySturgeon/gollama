@@ -78,8 +78,13 @@ func (llm *LLM) promptModel(prompts []string) {
 	// Create a buffer for the stdout
 	buf := make([]byte, 1024)
 
+	// Create a counter for the amount of completed inputs
+	counter := 0
+
 	// Prompt all the inputs
-	for _, input := range prompts {
+	for i, input := range prompts {
+		// When a prompt is first sent, it creates a \n> character automatically, so 'i' is incremented by 1 to reflect this
+		i = i + 1
 
 		// Input must contain an EOL for the LLM to correctly interpret the propmt's end
 		if !strings.Contains(input, "\n") {
@@ -102,13 +107,19 @@ func (llm *LLM) promptModel(prompts []string) {
 			token := string(buf[:n])
 			output = output + token
 
-			if strings.Count(output, ">") >= 2 {
-				break
+			if strings.Contains(token, "\n>") {
+				counter += 1
+				if counter > i {
+					break
+				}
 			}
 		}
 		fmt.Println("Completed reading output.")
 		outputs = append(outputs, strings.ReplaceAll(strings.ReplaceAll(output, "\n", ""), ">", ""))
 	}
+	// Print the outputs array to the screen
+	fmt.Println(outputs)
+
 	// Close the communication with the LLM
 	closePipes(cmd, stdin, stdout)
 
@@ -152,5 +163,5 @@ func closePipes(cmd *exec.Cmd, stdin io.WriteCloser, stdout io.ReadCloser) {
 
 func main() {
 	llm := LLM{model: "./models/llama-2-13b-chat.ggmlv3.q4_0.bin", ngl: 30}
-	llm.promptModel([]string{"Hi, how are you ?"})
+	llm.promptModel([]string{"Hi, how are you ?", "How many pieces of bread do I need for a sandwich?"})
 }
