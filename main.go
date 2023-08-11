@@ -112,7 +112,7 @@ func buildCommand(llm *LLM) string {
 }
 
 func createPipes(command string) (*exec.Cmd, io.WriteCloser, io.ReadCloser, error) {
-	cmd := exec.Command(command)
+	cmd := exec.Command("./test.sh")
 
 	// Create pipes for stdin and stdout
 	stdin, err := cmd.StdinPipe()
