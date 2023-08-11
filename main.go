@@ -8,16 +8,16 @@ import (
 )
 
 type LLM struct {
-	model          string   // Path to the model.bin
-	cuda_devices   []int    // Array of indices of the Cuda devices that will be used
-	ctx_size       int      // Size of the prompt context
-	temp           float32  // Temperature
-	top_k          int      // Top-k sampling
-	repeat_penalty float32  // Penalize repeat sequence of tokens
-	ngl            int      // Number of layers to store in VRAM
-	max_tokens     int      // Max number of tokens for model response
-	stop           []string // Array of generation-stopping strings
-	command        string   // Command to execute llama.cpp and therefore the model
+	model            string   // Path to the model.bin
+	cuda_devices     []int    // Array of indices of the Cuda devices that will be used
+	ctx_size         int      // Size of the prompt context
+	temp             float32  // Temperature
+	top_k            int      // Top-k sampling
+	repeat_penalty   float32  // Penalize repeat sequence of tokens
+	ngl              int      // Number of layers to store in VRAM
+	max_tokens       int      // Max number of tokens for model response
+	stop             []string // Array of generation-stopping strings
+	instructionBlock string   // Instructions to format the model respone
 }
 
 func (llm *LLM) getLLMProps() {
@@ -86,6 +86,9 @@ func (llm *LLM) promptModel(prompts []string) {
 		// When a prompt is first sent, it creates a \n> character automatically, so 'i' is incremented by 1 to reflect this
 		i = i + 1
 
+		// Add the instruction block to the input
+		input = llm.instructionBlock + input
+
 		// Input must contain an EOL for the LLM to correctly interpret the propmt's end
 		if !strings.Contains(input, "\n") {
 			input += "\n"
@@ -122,7 +125,6 @@ func (llm *LLM) promptModel(prompts []string) {
 
 	// Close the communication with the LLM
 	closePipes(cmd, stdin, stdout)
-
 }
 
 func createPipes(llm *LLM) (*exec.Cmd, io.WriteCloser, io.ReadCloser, error) {
