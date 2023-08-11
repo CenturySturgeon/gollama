@@ -27,6 +27,10 @@ func (llm *LLM) getLLMProps() {
 	fmt.Println("List of generation-stopping strings: ", llm.stop)
 }
 
+func buildCommand(llm *LLM) string {
+	return fmt.Sprintf("./llama.cpp/main -m %s --color   --ctx_size %d   -n -1   -ins -b 128   --top_k %d   --temp %.1f   --repeat_penalty %.1f   --n-gpu-layers %d   -t 8", llm.model, llm.ctx_size, llm.top_k, llm.temp, llm.repeat_penalty, llm.ngl)
+}
+
 func (llm *LLM) llmDefaults() {
 	if llm.model == "" {
 		llm.model = "./llama.cpp/models/ggml-vocab.bin"
@@ -54,9 +58,10 @@ func (llm *LLM) llmDefaults() {
 func (llm *LLM) promptModel(prompt string) {
 	llm.llmDefaults()
 	llm.getLLMProps()
+	fmt.Println(buildCommand(llm))
 }
 
 func main() {
-	llm := LLM{}
+	llm := LLM{model: "~/Ai/models/llama-2-13b-chat.ggmlv3.q4_0.bin", ctx_size: 1024, top_k: 1, temp: 0.5, repeat_penalty: 1.8, ngl: 30}
 	llm.promptModel("Hi")
 }
