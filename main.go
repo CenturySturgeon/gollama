@@ -12,9 +12,10 @@ type LLM struct {
 	ngl            int      // Number of layers to store in VRAM
 	max_tokens     int      // Max number of tokens for model response
 	stop           []string // Array of generation-stopping strings
+	command        string   // Command to execute llama.cpp and therefore the model
 }
 
-func getLLMProps(llm LLM) {
+func (llm *LLM) getLLMProps() {
 	fmt.Println("Model Path: ", llm.model)
 	fmt.Println("Indexes of Cuda devices to use: ", llm.cuda_devices)
 	fmt.Println("Size of the prompt context: ", llm.ctx_size)
@@ -26,10 +27,36 @@ func getLLMProps(llm LLM) {
 	fmt.Println("List of generation-stopping strings: ", llm.stop)
 }
 
-func promptModel(llm LLM) {
-	fmt.Println("Code goes here")
+func (llm *LLM) llmDefaults() {
+	if llm.model == "" {
+		llm.model = "./llama.cpp/models/ggml-vocab.bin"
+	}
+	if llm.cuda_devices == nil {
+		llm.cuda_devices = []int{0}
+	}
+	if llm.ctx_size == 0 {
+		llm.ctx_size = 2048
+	}
+	if llm.temp == 0 {
+		llm.temp = 0.2
+	}
+	if llm.top_k == 0 {
+		llm.top_k = 10000
+	}
+	if llm.repeat_penalty == 0 {
+		llm.repeat_penalty = 1.1
+	}
+	if llm.max_tokens == 0 {
+		llm.max_tokens = 1000
+	}
+}
+
+func (llm *LLM) promptModel(prompt string) {
+	llm.llmDefaults()
+	llm.getLLMProps()
 }
 
 func main() {
-	fmt.Println("Code goes here")
+	llm := LLM{}
+	llm.promptModel("Hi")
 }
