@@ -21,7 +21,7 @@ type LLM struct {
 	instructionBlock string   // Instructions to format the model response
 }
 
-func (llm *LLM) getLLMProps() {
+func (llm *LLM) GetLLMProps() {
 	fmt.Println("Model Path: ", llm.model)
 	fmt.Println("Llama.cpp Path: ", llm.llamacpp)
 	fmt.Println("Indexes of Cuda devices to use: ", llm.cuda_devices)
@@ -61,7 +61,7 @@ func (llm *LLM) llmDefaults() {
 	}
 }
 
-func (llm *LLM) promptModel(prompts []string) {
+func (llm *LLM) PromptModel(prompts []string) {
 	llm.llmDefaults()
 	cmd, stdin, stdout, err := createPipes(llm)
 
