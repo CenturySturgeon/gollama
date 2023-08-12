@@ -8,73 +8,73 @@ import (
 )
 
 type LLM struct {
-	model            string   // Path to the model.bin
-	llamacpp         string   // Path to the llama.cpp folder
-	cuda_devices     []int    // Array of indices of the Cuda devices that will be used
-	ctx_size         int      // Size of the prompt context
-	temp             float32  // Temperature
-	top_k            int      // Top-k sampling
-	repeat_penalty   float32  // Penalize repeat sequence of tokens
-	ngl              int      // Number of layers to store in VRAM
-	max_tokens       int      // Max number of tokens for model response
-	stop             []string // Array of generation-stopping strings
-	instructionBlock string   // Instructions to format the model response
+	Model            string   // Path to the model.bin
+	Llamacpp         string   // Path to the llama.cpp folder
+	CudaDevices      []int    // Array of indices of the Cuda devices that will be used
+	CtxSize          int      // Size of the prompt context
+	Temp             float32  // Temperature
+	TopK             int      // Top-k sampling
+	RepeatPenalty    float32  // Penalize repeat sequence of tokens
+	Ngl              int      // Number of layers to store in VRAM
+	MaxTokens        int      // Max number of tokens for model response
+	Stop             []string // Array of generation-stopping strings
+	InstructionBlock string   // Instructions to format the model response
 }
 
 func (llm *LLM) GetLLMProps() {
-	fmt.Println("Model Path: ", llm.model)
-	fmt.Println("Llama.cpp Path: ", llm.llamacpp)
-	fmt.Println("Indexes of Cuda devices to use: ", llm.cuda_devices)
-	fmt.Println("Size of the prompt context: ", llm.ctx_size)
-	fmt.Println("Temperature: ", llm.temp)
-	fmt.Println("Top-k sampling: ", llm.top_k)
-	fmt.Println("Penalize repeat sequence of tokens: ", llm.repeat_penalty)
-	fmt.Println("Number of layers to store in VRAM: ", llm.ngl)
-	fmt.Println("Max number of tokens for model response: ", llm.max_tokens)
-	fmt.Println("List of generation-stopping strings: ", llm.stop)
+	fmt.Println("Model Path: ", llm.Model)
+	fmt.Println("Llama.cpp Path: ", llm.Llamacpp)
+	fmt.Println("Indexes of Cuda devices to use: ", llm.CudaDevices)
+	fmt.Println("Size of the prompt context: ", llm.CtxSize)
+	fmt.Println("Temperature: ", llm.Temp)
+	fmt.Println("Top-k sampling: ", llm.TopK)
+	fmt.Println("Penalize repeat sequence of tokens: ", llm.RepeatPenalty)
+	fmt.Println("Number of layers to store in VRAM: ", llm.Ngl)
+	fmt.Println("Max number of tokens for model response: ", llm.MaxTokens)
+	fmt.Println("List of generation-stopping strings: ", llm.Stop)
 }
 
 func (llm *LLM) llmDefaults() {
-	if llm.model == "" {
-		llm.model = "./llama.cpp/models/ggml-vocab.bin"
+	if llm.Model == "" {
+		llm.Model = "./llama.cpp/models/ggml-vocab.bin"
 	}
-	if llm.llamacpp == "" {
-		llm.model = "./llama.cpp"
+	if llm.Llamacpp == "" {
+		llm.Llamacpp = "./llama.cpp"
 	}
-	if llm.cuda_devices == nil {
-		llm.cuda_devices = []int{0}
+	if llm.CudaDevices == nil {
+		llm.CudaDevices = []int{0}
 	}
-	if llm.ctx_size == 0 {
-		llm.ctx_size = 2048
+	if llm.CtxSize == 0 {
+		llm.CtxSize = 2048
 	}
-	if llm.temp == 0 {
-		llm.temp = 0.2
+	if llm.Temp == 0 {
+		llm.Temp = 0.2
 	}
-	if llm.top_k == 0 {
-		llm.top_k = 10000
+	if llm.TopK == 0 {
+		llm.TopK = 10000
 	}
-	if llm.repeat_penalty == 0 {
-		llm.repeat_penalty = 1.1
+	if llm.RepeatPenalty == 0 {
+		llm.RepeatPenalty = 1.1
 	}
-	if llm.max_tokens == 0 {
-		llm.max_tokens = 1000
+	if llm.MaxTokens == 0 {
+		llm.MaxTokens = 1000
 	}
 }
 
-func (llm *LLM) PromptModel(prompts []string) {
+func (llm *LLM) PromptModel(prompts []string) ([]string, error) {
 	llm.llmDefaults()
 	cmd, stdin, stdout, err := createPipes(llm)
 
 	if err != nil {
 		fmt.Println("Error creating pipes", err)
-		return
+		return []string{"Error creating pipes"}, err
 	}
 
 	// Start the llama.cpp llm communication process
 	comErr := cmd.Start()
 	if comErr != nil {
 		fmt.Println("Error starting command:", comErr)
-		return
+		return []string{"Error starting command:"}, comErr
 	}
 
 	// Array for the collection of outputs
@@ -92,7 +92,7 @@ func (llm *LLM) PromptModel(prompts []string) {
 		i = i + 1
 
 		// Add the instruction block to the input
-		input = llm.instructionBlock + input
+		input = llm.InstructionBlock + input
 
 		// Input must contain an EOL for the LLM to correctly interpret the propmt's end
 		if !strings.Contains(input, "\n") {
@@ -130,11 +130,14 @@ func (llm *LLM) PromptModel(prompts []string) {
 
 	// Close the communication with the LLM
 	closePipes(cmd, stdin, stdout)
+
+	// Return the LLM responses
+	return outputs, nil
 }
 
 func createPipes(llm *LLM) (*exec.Cmd, io.WriteCloser, io.ReadCloser, error) {
-	mainPath := llm.llamacpp + "/main"
-	cmd := exec.Command(mainPath, "-m", llm.model, "--color", "--ctx_size", fmt.Sprint(llm.ctx_size), "-n", "-1", "-ins", "-b", "128", "--top_k", fmt.Sprint(llm.top_k), "--temp", fmt.Sprint(llm.temp), "--repeat_penalty", fmt.Sprint(llm.repeat_penalty), "--n-gpu-layers", fmt.Sprint(llm.ngl), "-t", "8")
+	mainPath := llm.Llamacpp + "/main"
+	cmd := exec.Command(mainPath, "-m", llm.Model, "--color", "--ctx_size", fmt.Sprint(llm.CtxSize), "-n", "-1", "-ins", "-b", "128", "--top_k", fmt.Sprint(llm.TopK), "--temp", fmt.Sprint(llm.Temp), "--repeat_penalty", fmt.Sprint(llm.RepeatPenalty), "--n-gpu-layers", fmt.Sprint(llm.Ngl), "-t", "8")
 	// Set the working directory if needed (for access to other directories)
 	// cmd.Dir = ""
 
