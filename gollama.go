@@ -21,6 +21,7 @@ type LLM struct {
 	InstructionBlock string   // Instructions to format the model response
 }
 
+// GetLLMProps reads the properties currently set to the LLM struct.
 func (llm *LLM) GetLLMProps() {
 	fmt.Println("Model Path: ", llm.Model)
 	fmt.Println("Llama.cpp Path: ", llm.Llamacpp)
@@ -34,6 +35,7 @@ func (llm *LLM) GetLLMProps() {
 	fmt.Println("List of generation-stopping strings: ", llm.Stop)
 }
 
+// llmDefaults sets the default values to LLM struct properties in case they are missing user input.
 func (llm *LLM) llmDefaults() {
 	if llm.Model == "" {
 		llm.Model = "./llama.cpp/models/ggml-vocab.bin"
@@ -61,6 +63,8 @@ func (llm *LLM) llmDefaults() {
 	}
 }
 
+// createPipes method creates the running process of llama.cpp on which the LLM will be running. It also creates the communication pipes for GoLlama.
+// It returns the command to run llama.cpp, the communication pipes, and an error (in case something went wrong).
 func createPipes(llm *LLM) (*exec.Cmd, io.WriteCloser, io.ReadCloser, error) {
 	mainPath := llm.Llamacpp + "/main"
 	cmd := exec.Command(mainPath, "-m", llm.Model, "--color", "--ctx_size", fmt.Sprint(llm.CtxSize), "-n", "-1", "-ins", "-b", "128", "--top_k", fmt.Sprint(llm.TopK), "--temp", fmt.Sprint(llm.Temp), "--repeat_penalty", fmt.Sprint(llm.RepeatPenalty), "--n-gpu-layers", fmt.Sprint(llm.Ngl), "-t", "8")
@@ -84,6 +88,7 @@ func createPipes(llm *LLM) (*exec.Cmd, io.WriteCloser, io.ReadCloser, error) {
 	return cmd, stdin, stdout, nil
 }
 
+// closePipes function closes the provided pipes and closes the command process.
 func closePipes(cmd *exec.Cmd, stdin io.WriteCloser, stdout io.ReadCloser) {
 	// Close the stdin pipe to signal the end of input
 	myerr := stdin.Close()
