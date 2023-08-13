@@ -61,6 +61,41 @@ func (llm *LLM) llmDefaults() {
 	}
 }
 
+func createPipes(llm *LLM) (*exec.Cmd, io.WriteCloser, io.ReadCloser, error) {
+	mainPath := llm.Llamacpp + "/main"
+	cmd := exec.Command(mainPath, "-m", llm.Model, "--color", "--ctx_size", fmt.Sprint(llm.CtxSize), "-n", "-1", "-ins", "-b", "128", "--top_k", fmt.Sprint(llm.TopK), "--temp", fmt.Sprint(llm.Temp), "--repeat_penalty", fmt.Sprint(llm.RepeatPenalty), "--n-gpu-layers", fmt.Sprint(llm.Ngl), "-t", "8")
+	// Set the working directory if needed (for access to other directories)
+	// cmd.Dir = ""
+
+	// Create a writer for sending data to Python's stdin
+	stdin, err := cmd.StdinPipe()
+	if err != nil {
+		fmt.Println("Error creating stdin pipe:", err)
+		return nil, nil, nil, err
+	}
+
+	// Create pipes for capturing Python's stdout and stderr
+	stdout, err := cmd.StdoutPipe()
+	if err != nil {
+		fmt.Println("Error creating stdout pipe:", err)
+		return nil, nil, nil, err
+	}
+
+	return cmd, stdin, stdout, nil
+}
+
+func closePipes(cmd *exec.Cmd, stdin io.WriteCloser, stdout io.ReadCloser) {
+	// Close the stdin pipe to signal the end of input
+	myerr := stdin.Close()
+
+	if myerr != nil {
+		fmt.Println("Error when closing the command:", myerr)
+	}
+
+	// Close the communication with the llm
+	cmd.Process.Kill()
+}
+
 // PromptModel method orderly prompts the LLM with the provided prompts in the array, engaging in a sort of conversation.
 // It returns an array with the respones of the LLM, each response matching with the index of its prompt.
 func (llm *LLM) PromptModel(prompts []string) ([]string, error) {
@@ -132,39 +167,4 @@ func (llm *LLM) PromptModel(prompts []string) ([]string, error) {
 
 	// Return the LLM responses
 	return outputs, nil
-}
-
-func createPipes(llm *LLM) (*exec.Cmd, io.WriteCloser, io.ReadCloser, error) {
-	mainPath := llm.Llamacpp + "/main"
-	cmd := exec.Command(mainPath, "-m", llm.Model, "--color", "--ctx_size", fmt.Sprint(llm.CtxSize), "-n", "-1", "-ins", "-b", "128", "--top_k", fmt.Sprint(llm.TopK), "--temp", fmt.Sprint(llm.Temp), "--repeat_penalty", fmt.Sprint(llm.RepeatPenalty), "--n-gpu-layers", fmt.Sprint(llm.Ngl), "-t", "8")
-	// Set the working directory if needed (for access to other directories)
-	// cmd.Dir = ""
-
-	// Create a writer for sending data to Python's stdin
-	stdin, err := cmd.StdinPipe()
-	if err != nil {
-		fmt.Println("Error creating stdin pipe:", err)
-		return nil, nil, nil, err
-	}
-
-	// Create pipes for capturing Python's stdout and stderr
-	stdout, err := cmd.StdoutPipe()
-	if err != nil {
-		fmt.Println("Error creating stdout pipe:", err)
-		return nil, nil, nil, err
-	}
-
-	return cmd, stdin, stdout, nil
-}
-
-func closePipes(cmd *exec.Cmd, stdin io.WriteCloser, stdout io.ReadCloser) {
-	// Close the stdin pipe to signal the end of input
-	myerr := stdin.Close()
-
-	if myerr != nil {
-		fmt.Println("Error when closing the command:", myerr)
-	}
-
-	// Close the communication with the llm
-	cmd.Process.Kill()
 }
