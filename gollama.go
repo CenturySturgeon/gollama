@@ -61,20 +61,22 @@ func (llm *LLM) llmDefaults() {
 	}
 }
 
+// PromptModel method orderly prompts the LLM with the provided prompts in the array, engaging in a sort of conversation.
+// It returns an array with the respones of the LLM, each response matching with the index of its prompt.
 func (llm *LLM) PromptModel(prompts []string) ([]string, error) {
 	llm.llmDefaults()
 	cmd, stdin, stdout, err := createPipes(llm)
 
 	if err != nil {
-		fmt.Println("Error creating pipes", err)
-		return []string{"Error creating pipes"}, err
+		fmt.Println("Error creating pipes:", err)
+		return []string{"Error creating pipes."}, err
 	}
 
 	// Start the llama.cpp llm communication process
 	comErr := cmd.Start()
 	if comErr != nil {
 		fmt.Println("Error starting command:", comErr)
-		return []string{"Error starting command:"}, comErr
+		return []string{"Error starting command."}, comErr
 	}
 
 	// Array for the collection of outputs
@@ -122,11 +124,8 @@ func (llm *LLM) PromptModel(prompts []string) ([]string, error) {
 				}
 			}
 		}
-		fmt.Println("Completed reading output.")
 		outputs = append(outputs, strings.ReplaceAll(strings.ReplaceAll(output, "\n", ""), ">", ""))
 	}
-	// Print the outputs array to the screen
-	fmt.Println(outputs)
 
 	// Close the communication with the LLM
 	closePipes(cmd, stdin, stdout)
@@ -159,13 +158,11 @@ func createPipes(llm *LLM) (*exec.Cmd, io.WriteCloser, io.ReadCloser, error) {
 }
 
 func closePipes(cmd *exec.Cmd, stdin io.WriteCloser, stdout io.ReadCloser) {
-
-	fmt.Println("Closing stdin")
 	// Close the stdin pipe to signal the end of input
 	myerr := stdin.Close()
 
 	if myerr != nil {
-		fmt.Println("Error when closing the command :", myerr)
+		fmt.Println("Error when closing the command:", myerr)
 	}
 
 	// Close the communication with the llm
