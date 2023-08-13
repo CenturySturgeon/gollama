@@ -21,6 +21,7 @@ type LLM struct {
 	InstructionBlock string   // Instructions to format the model response
 }
 
+// GetLLMProps reads the properties currently set to the LLM struct.
 func (llm *LLM) GetLLMProps() {
 	fmt.Println("Model Path: ", llm.Model)
 	fmt.Println("Llama.cpp Path: ", llm.Llamacpp)
@@ -34,6 +35,7 @@ func (llm *LLM) GetLLMProps() {
 	fmt.Println("List of generation-stopping strings: ", llm.Stop)
 }
 
+// llmDefaults sets the default values to LLM struct properties in case they are missing user input.
 func (llm *LLM) llmDefaults() {
 	if llm.Model == "" {
 		llm.Model = "./llama.cpp/models/ggml-vocab.bin"
@@ -61,20 +63,60 @@ func (llm *LLM) llmDefaults() {
 	}
 }
 
+// createPipes method creates the running process of llama.cpp on which the LLM will be running. It also creates the communication pipes for GoLlama.
+// It returns the command to run llama.cpp, the communication pipes, and an error (in case something went wrong).
+func createPipes(llm *LLM) (*exec.Cmd, io.WriteCloser, io.ReadCloser, error) {
+	mainPath := llm.Llamacpp + "/main"
+	cmd := exec.Command(mainPath, "-m", llm.Model, "--color", "--ctx_size", fmt.Sprint(llm.CtxSize), "-n", "-1", "-ins", "-b", "128", "--top_k", fmt.Sprint(llm.TopK), "--temp", fmt.Sprint(llm.Temp), "--repeat_penalty", fmt.Sprint(llm.RepeatPenalty), "--n-gpu-layers", fmt.Sprint(llm.Ngl), "-t", "8")
+	// Set the working directory if needed (for access to other directories)
+	// cmd.Dir = ""
+
+	// Create a writer for sending data to Python's stdin
+	stdin, err := cmd.StdinPipe()
+	if err != nil {
+		fmt.Println("Error creating stdin pipe:", err)
+		return nil, nil, nil, err
+	}
+
+	// Create pipes for capturing Python's stdout and stderr
+	stdout, err := cmd.StdoutPipe()
+	if err != nil {
+		fmt.Println("Error creating stdout pipe:", err)
+		return nil, nil, nil, err
+	}
+
+	return cmd, stdin, stdout, nil
+}
+
+// closePipes function closes the provided pipes and closes the command process.
+func closePipes(cmd *exec.Cmd, stdin io.WriteCloser, stdout io.ReadCloser) {
+	// Close the stdin pipe to signal the end of input
+	myerr := stdin.Close()
+
+	if myerr != nil {
+		fmt.Println("Error when closing the command:", myerr)
+	}
+
+	// Close the communication with the llm
+	cmd.Process.Kill()
+}
+
+// PromptModel method orderly prompts the LLM with the provided prompts in the array, engaging in a sort of conversation.
+// It returns an array with the respones of the LLM, each response matching with the index of its prompt.
 func (llm *LLM) PromptModel(prompts []string) ([]string, error) {
 	llm.llmDefaults()
 	cmd, stdin, stdout, err := createPipes(llm)
 
 	if err != nil {
-		fmt.Println("Error creating pipes", err)
-		return []string{"Error creating pipes"}, err
+		fmt.Println("Error creating pipes:", err)
+		return []string{"Error creating pipes."}, err
 	}
 
 	// Start the llama.cpp llm communication process
 	comErr := cmd.Start()
 	if comErr != nil {
 		fmt.Println("Error starting command:", comErr)
-		return []string{"Error starting command:"}, comErr
+		return []string{"Error starting command."}, comErr
 	}
 
 	// Array for the collection of outputs
@@ -122,11 +164,8 @@ func (llm *LLM) PromptModel(prompts []string) ([]string, error) {
 				}
 			}
 		}
-		fmt.Println("Completed reading output.")
 		outputs = append(outputs, strings.ReplaceAll(strings.ReplaceAll(output, "\n", ""), ">", ""))
 	}
-	// Print the outputs array to the screen
-	fmt.Println(outputs)
 
 	// Close the communication with the LLM
 	closePipes(cmd, stdin, stdout)
@@ -135,39 +174,65 @@ func (llm *LLM) PromptModel(prompts []string) ([]string, error) {
 	return outputs, nil
 }
 
-func createPipes(llm *LLM) (*exec.Cmd, io.WriteCloser, io.ReadCloser, error) {
-	mainPath := llm.Llamacpp + "/main"
-	cmd := exec.Command(mainPath, "-m", llm.Model, "--color", "--ctx_size", fmt.Sprint(llm.CtxSize), "-n", "-1", "-ins", "-b", "128", "--top_k", fmt.Sprint(llm.TopK), "--temp", fmt.Sprint(llm.Temp), "--repeat_penalty", fmt.Sprint(llm.RepeatPenalty), "--n-gpu-layers", fmt.Sprint(llm.Ngl), "-t", "8")
-	// Set the working directory if needed (for access to other directories)
-	// cmd.Dir = ""
+// BufferPromptModel prompts the model expecting the real time output, allowing you to use its response as it's being generated.
+// It sends the LLM response tokens as strings to the provided channel.
+func (llm *LLM) BufferPromptModel(prompt string, outputChan chan<- string) {
+	llm.llmDefaults()
 
-	// Create a writer for sending data to Python's stdin
-	stdin, err := cmd.StdinPipe()
+	cmd, stdin, stdout, err := createPipes(llm)
+
 	if err != nil {
-		fmt.Println("Error creating stdin pipe:", err)
-		return nil, nil, nil, err
+		fmt.Println("Error creating pipes:", err)
+		return
 	}
 
-	// Create pipes for capturing Python's stdout and stderr
-	stdout, err := cmd.StdoutPipe()
-	if err != nil {
-		fmt.Println("Error creating stdout pipe:", err)
-		return nil, nil, nil, err
+	// Start the llama.cpp llm communication process
+	comErr := cmd.Start()
+	if comErr != nil {
+		fmt.Println("Error starting command:", comErr)
+		return
 	}
 
-	return cmd, stdin, stdout, nil
-}
+	// Create a buffer for the stdout
+	buf := make([]byte, 1024)
 
-func closePipes(cmd *exec.Cmd, stdin io.WriteCloser, stdout io.ReadCloser) {
+	// Add the instruction block to the input
+	input := llm.InstructionBlock + prompt
 
-	fmt.Println("Closing stdin")
-	// Close the stdin pipe to signal the end of input
-	myerr := stdin.Close()
-
-	if myerr != nil {
-		fmt.Println("Error when closing the command :", myerr)
+	// Input must contain an EOL for the LLM to correctly interpret the propmt's end
+	if !strings.Contains(input, "\n") {
+		input += "\n"
 	}
 
-	// Close the communication with the llm
-	cmd.Process.Kill()
+	// Prompting the llm
+	io.WriteString(stdin, input)
+
+	// Create a counter to detect when the response is complete
+	counter := 0
+	for {
+		n, err := stdout.Read(buf)
+		if err != nil {
+			if err != io.EOF {
+				fmt.Println("Error reading token:", err)
+			}
+			break
+		}
+
+		token := string(buf[:n])
+
+		if strings.Contains(token, "\n>") {
+			counter += 1
+			if counter > 1 {
+				break
+			}
+		} else {
+			outputChan <- token
+		}
+	}
+
+	// Close the communication with the LLM
+	closePipes(cmd, stdin, stdout)
+
+	// Close the channel to signal end of data transferring
+	close(outputChan)
 }
