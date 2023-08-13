@@ -168,3 +168,66 @@ func (llm *LLM) PromptModel(prompts []string) ([]string, error) {
 	// Return the LLM responses
 	return outputs, nil
 }
+
+// BufferPromptModel prompts the model expecting the real time output, allowing you to use its response as it's being generated.
+// It sends the LLM response tokens as strings to the provided channel.
+func (llm *LLM) BufferPromptModel(prompt string, outputChan chan<- string) {
+	llm.llmDefaults()
+
+	cmd, stdin, stdout, err := createPipes(llm)
+
+	if err != nil {
+		fmt.Println("Error creating pipes:", err)
+		return
+	}
+
+	// Start the llama.cpp llm communication process
+	comErr := cmd.Start()
+	if comErr != nil {
+		fmt.Println("Error starting command:", comErr)
+		return
+	}
+
+	// Create a buffer for the stdout
+	buf := make([]byte, 1024)
+
+	// Add the instruction block to the input
+	input := llm.InstructionBlock + prompt
+
+	// Input must contain an EOL for the LLM to correctly interpret the propmt's end
+	if !strings.Contains(input, "\n") {
+		input += "\n"
+	}
+
+	// Prompting the llm
+	io.WriteString(stdin, input)
+
+	// Create a counter to detect when the response is complete
+	counter := 0
+	for {
+		n, err := stdout.Read(buf)
+		if err != nil {
+			if err != io.EOF {
+				fmt.Println("Error reading token:", err)
+			}
+			break
+		}
+
+		token := string(buf[:n])
+
+		if strings.Contains(token, "\n>") {
+			counter += 1
+			if counter > 1 {
+				break
+			}
+		} else {
+			outputChan <- token
+		}
+	}
+
+	// Close the communication with the LLM
+	closePipes(cmd, stdin, stdout)
+
+	// Close the channel to signal end of data transferring
+	close(outputChan)
+}
