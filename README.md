@@ -1,6 +1,6 @@
 # GoLlama: Llama.cpp IPC Library
 
-=============================================
+=========================================================
 
 GoLLama is a lightweight IPC library for developing LLM applications using Go and llama.cpp. It provides a simple and intuitive way to interact with the LLM runtime on top of llama.cpp using stdin/stdout.
 
@@ -30,11 +30,12 @@ func  main() {
 
 ```
 
-This example demonstrates how to interact with a llama-2-13b-chat LLM, running on top of llama.cpp, from Go using the `PromptModel` method. It prompts the LLM with the question "Hi, how are you?" and then reads the response back into the `outputs` variable to print it afterwards.
+This example demonstrates how to interact with a llama-2-13b-chat LLM instance, running on top of llama.cpp, from Go using the `PromptModel` method. It prompts the LLM with the question "Hi, how are you?" and then reads the response back into the `outputs` variable to print it afterwards.
 
   
 
 ### Cloning the repo
 
-GoLlama needs a running instance of Llama.cpp in order to communicate with the LLM of your choice. Run the following command to clone the repo alonside the llama.cpp submodule:
+GoLlama requires a running instance of Llama.cpp in order to communicate with any LLM. Run the following command to clone the repo alonside the llama.cpp submodule:
+
 `git clone --recursive https://github.com/CenturySturgeon/gollama.git`
