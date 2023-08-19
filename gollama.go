@@ -16,6 +16,7 @@ type LLM struct {
 	TopK             int      // Top-k sampling
 	RepeatPenalty    float32  // Penalize repeat sequence of tokens
 	Ngl              int      // Number of layers to store in VRAM
+	CpuCores         int      // Number of physical cpu cores
 	MaxTokens        int      // Max number of tokens for model response
 	Stop             []string // Array of generation-stopping strings
 	InstructionBlock string   // Instructions to format the model response
@@ -52,6 +53,9 @@ func (llm *LLM) llmDefaults() {
 	if llm.Temp == 0 {
 		llm.Temp = 0.2
 	}
+	if llm.CpuCores == 0 {
+		llm.CpuCores = 8
+	}
 	if llm.TopK == 0 {
 		llm.TopK = 10000
 	}
@@ -67,7 +71,11 @@ func (llm *LLM) llmDefaults() {
 // It returns the command to run llama.cpp, the communication pipes, and an error (in case something went wrong).
 func createPipes(llm *LLM) (*exec.Cmd, io.WriteCloser, io.ReadCloser, error) {
 	mainPath := llm.Llamacpp + "/main"
-	cmd := exec.Command(mainPath, "-m", llm.Model, "--color", "--ctx_size", fmt.Sprint(llm.CtxSize), "-n", "-1", "-ins", "-b", "128", "--top_k", fmt.Sprint(llm.TopK), "--temp", fmt.Sprint(llm.Temp), "--repeat_penalty", fmt.Sprint(llm.RepeatPenalty), "--n-gpu-layers", fmt.Sprint(llm.Ngl), "-t", "8")
+
+	// By default, the models are to be ran on instruction mode hence the '-ins' flag
+	cmd := exec.Command(mainPath, "-m", llm.Model, "--color", "--ctx_size", fmt.Sprint(llm.CtxSize), "-n", "-1", "-ins", "-b", "128", "--top_k",
+		fmt.Sprint(llm.TopK), "--temp", fmt.Sprint(llm.Temp), "--repeat_penalty", fmt.Sprint(llm.RepeatPenalty), "--n-gpu-layers", fmt.Sprint(llm.Ngl), "-t", fmt.Sprint(llm.CpuCores), "-ins")
+
 	// Set the working directory if needed (for access to other directories)
 	// cmd.Dir = ""
 
