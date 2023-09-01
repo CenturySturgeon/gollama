@@ -34,7 +34,18 @@ func  main() {
 
 This example demonstrates how to use Go to interact with a llama-2-13b-chat LLM instance, which is running on top of llama.cpp,  using GoLlama's `PromptModel` method. It prompts the LLM with the question "Hi, how are you?" and then reads the response back into the `outputs` variable to print it afterwards.
 
-  
+
+### Important Notes
+
+As of August 21st 2023, llama.cpp no longer supports the GGML format. However, this doesn't affet GoLlama's performance since it runs on top of a llama.cpp running instance. This means that as long as you can run llama.cpp on your machine you can use gollama.
+
+GGUF is a new format introduced by the llama.cpp team on August 21st 2023. It is a replacement for GGML, which is no longer supported by llama.cpp.
+
+If you'd like to use models that use the GGML format just set llama.cpp on commit 220d9318647a8ce127dbf7c9de5400455f41e7d8 (keep in mind this probably won't work if your model is from August 21st 2023 onward) and run the setup as normal.
+
+To use GGUF models, you can just switch to the latest commit and follow the setup instructions in llama.cpp's github repo. 
+
+Remember: As long as you can get llama.cpp running, you can use GoLlama.
 
 ### Cloning the repo
 
