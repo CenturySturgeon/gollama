@@ -4,7 +4,7 @@ GoLLama is a lightweight inter-process communication library for developing LLM 
 
 ![Diagram](https://github.com/CenturySturgeon/CenturySturgeon.github.io/blob/main/Images/GoLlama.svg)
 
-### Usage
+## Usage
 
 To use GoLlama, you can import the `gollama` package and create an instance of the `LLM` struct. You can then use the `PromptModel` method to send and receive data between your application and any LLM supported by llama.cpp. Here is an example:
 
@@ -30,7 +30,7 @@ func  main() {
 
 ```
 
-This example demonstrates how to use Go to interact with a llama-2-13b-chat LLM instance, which is running on top of llama.cpp,  using GoLlama's `PromptModel` method. It prompts the LLM with the question "Hi, how are you?" and then reads the response back into the `outputs` variable to print it afterwards.
+This example demonstrates how to interact with a llama-2-13b-chat LLM instance using GoLlama's `PromptModel` method. It prompts the LLM with the question "Hi, how are you?" and then reads the response back into the `outputs` variable to print it afterwards.
 
 
 ## Important Notes
@@ -45,25 +45,43 @@ To use GGUF models, you can just switch to the latest commit and follow the setu
 
 Remember: As long as you can get llama.cpp running, you can use GoLlama.
 
-### Cloning the repo
+## Instalation
 
-GoLlama requires a running instance of Llama.cpp in order to communicate with any LLM. Run the following command to clone the repo alonside the llama.cpp submodule:
+To install GoLlama, be sure to have a go project already initialized and then run:
+
+```
+go get github.com/CenturySturgeon/gollama
+```
+
+The latest version of GoLlama will be installed, which  you can review it on your go.mod and go.sum files. Once GoLlama's installed, you should proceed by cloning the llama.cpp project, build it, and download an LLM in gguf/ggml format. This is crucial since GoLlama requires an already built instance of Llama.cpp in order to communicate with any LLM. To get the example shown above running, your folder structure should be similar to this:
+
+```
+.
+├── llama.cpp/
+│   ├── ...
+│   └── models/
+│       └── llama-2-13b-chat.ggmlv3.q4_0.bin
+├── go.mod
+├── go.sum
+└── main.go
+```
+
+
+Alternatively, you can clone this repository alongside the llama.cpp submodule:
 
 `git clone --recursive https://github.com/CenturySturgeon/gollama.git`
 
 ### Downloading a model
 
-Additionally, an LLM is required for GoLlama to work. You can use any model you want as long as it is in ggml (using llama.cpp's commit 220d9318647a8ce127dbf7c9de5400455f41e7d8 or earlier) or gguf format. Even though you can download the models and build the gguf/ggml files from source, I'd recommend you go to Hugginface and check out user TheBloke, since he has put in the work of making many LLMs available in gguf/ggml format https://huggingface.co/TheBloke.
+You can use any language model of your choice as long as it is in ggml (using llama.cpp's commit 220d9318647a8ce127dbf7c9de5400455f41e7d8 or earlier) or gguf format. Even though you can download the models and build the gguf/ggml files from source, I'd recommend checking out Hugginface's user TheBloke, since he has put in the work of making many LLMs available in gguf/ggml format https://huggingface.co/TheBloke.
 
-Once you've downloaded a model, don't forget to point your GoLlama's LLM instance to the path of the model. Since LLMs are very heavy files, even when quantized, I'd recommend you store all your models in a single directory and point the GoLlama LLM instance using an absoulute path. This way you don't have to download the same model multiple times during the development of multiple Gollama applications.
+Once you've downloaded a model, don't forget to point your GoLlama's LLM instance to the path of the model. Since LLMs are very heavy files (even when quantized) I'd recommend you store all your models in a single directory and point the GoLlama LLM instance using an absoulute path. This way you don't have to download the same model multiple times during the development of multiple GoLlama applications.
 
 ```
 llm := gollama.LLM{Model: "ABSOLUTE_PATH_TO_YOUR_MODEL", ... }
 ```
 
 ## Docs
-
-All implementations of the described methods are covered on the examples folder.
 
 ### PromptModel
 
