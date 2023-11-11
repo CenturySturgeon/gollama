@@ -1,7 +1,5 @@
 # GoLlama: Llama.cpp IPC Library
 
-=======================================================================
-
 GoLLama is a lightweight inter-process communication library for developing LLM applications using Go and llama.cpp. It provides a simple and intuitive way to interact with the LLM runtime on top of llama.cpp using stdin/stdout.
 
 ![Diagram](https://github.com/CenturySturgeon/CenturySturgeon.github.io/blob/main/Images/GoLlama.svg)
@@ -52,3 +50,33 @@ Remember: As long as you can get llama.cpp running, you can use GoLlama.
 GoLlama requires a running instance of Llama.cpp in order to communicate with any LLM. Run the following command to clone the repo alonside the llama.cpp submodule:
 
 `git clone --recursive https://github.com/CenturySturgeon/gollama.git`
+
+### Downloading a model
+
+Additionally, an LLM is required for GoLlama to work. You can use any model you want as long as it is in ggml (using llama.cpp's commit 220d9318647a8ce127dbf7c9de5400455f41e7d8 or earlier) or gguf format. Even though you can download the models and build the gguf/ggml files from source, I'd recommend you go to Hugginface and check out user TheBloke, since he has put in the work of making many LLMs available in gguf/ggml format https://huggingface.co/TheBloke.
+
+Once you've downloaded a model, don't forget to point your GoLlama's LLM instance to the path of the model. Since LLMs are very heavy files, even when quantized, I'd recommend you store all your models in a single directory and point the GoLlama LLM instance using an absoulute path. This way you don't have to download the same model multiple times during the development of multiple Gollama applications.
+
+```
+llm := gollama.LLM{Model: "ABSOLUTE_PATH_TO_YOUR_MODEL", ... }
+```
+
+## Docs
+
+All implementations of the described methods are covered on the examples folder.
+
+### PromptModel
+
+PromptModel method orderly prompts the LLM with the provided prompts in the array, engaging in a sort of conversation. It returns an array with the respones of the LLM, each response matching with the index of its prompt.
+
+```
+llm.PromptModel([]string{"Your Prompt Here", "Another Prompt Here"})
+```
+
+### BufferPromptModel
+
+Method that returns the model's response in real time as it is being built. A prompt passed as a string and a channel are required, the response tokens will be sent to the channel as they're being written.
+
+```
+llm.BufferPromptModel("Your Prompt Here", outputChannel)
+```
